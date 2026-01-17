@@ -18,10 +18,10 @@ export default async function DashboardPage() {
         return redirect('/login')
     }
 
-    // Fetch profile to check superadmin status from database
+    // Fetch profile to check status and get name from database
     const { data: profile } = await supabase
         .from('profiles')
-        .select('is_superadmin')
+        .select('is_superadmin, is_admin, full_name')
         .eq('id', user.id)
         .single()
 
@@ -34,14 +34,6 @@ export default async function DashboardPage() {
     }
 
     const { data: todos } = await query.order('created_at', { ascending: false })
-
-    // Fetch profile to check admin status and get name
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('is_admin, full_name')
-        .eq('id', user.id)
-        .limit(1)
-        .maybeSingle()
 
     return (
         <div className="flex min-h-screen flex-col bg-muted/20 p-4 md:p-8">
