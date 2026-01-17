@@ -11,7 +11,7 @@ export async function getCurrentUserRole() {
 
     const { data: profile } = await supabase
         .from('profiles')
-        .select('is_admin, email')
+        .select('is_admin, is_superadmin, email')
         .eq('id', user.id)
         .single()
 
@@ -27,7 +27,7 @@ export async function getAllProfiles() {
 
     const { data: profile } = await supabase
         .from('profiles')
-        .select('is_admin, email')
+        .select('is_admin, is_superadmin, email')
         .eq('id', user.id)
         .single()
 
@@ -61,12 +61,12 @@ export async function updateProfile(id: string, updates: any) {
         .single()
 
     // Prevent modifying the primary superadmin
-    if (targetProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
-        return { error: "This primary superadmin account cannot be modified." }
+    if (targetProfile?.is_superadmin) {
+        return { error: "This superadmin account cannot be modified." }
     }
 
     // Role-based authorization checks
-    const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
+    const isSuperadmin = currentUserProfile.is_superadmin
     const isTargetAdmin = targetProfile?.is_admin
 
     // Regular admins can ONLY modify regular users (not other admins)
@@ -97,27 +97,32 @@ export async function deleteUser(id: string) {
     // Get target profile
     const { data: targetProfile } = await adminSupabase
         .from('profiles')
-        .select('email, is_admin')
+        .select('email, is_admin, is_superadmin')
         .eq('id', id)
         .single()
 
     // Prevent deleting the primary superadmin
-    if (targetProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
-        return { error: "This primary superadmin account cannot be deleted." }
+    if (targetProfile?.is_superadmin) {
+        return { error: "This superadmin account cannot be deleted." }
     }
 
     // Only superadmins can delete admins
-    const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
-    if (!isSuperadmin && targetProfile?.is_admin) {
-        return { error: "Only superadmins can delete admins." }
+    const isSuperadmin = currentUserProfile.is_superadmin
+    const isTargetAdmin = targetProfile?.is_admin
+
+    if (!isSuperadmin && isTargetAdmin) {
+        return { error: "Only superadmins can delete admin accounts." }
     }
 
-    const { error } = await adminSupabase
+    const { error } = await adminSupabase.auth.admin.deleteUser(id)
+    if (error) return { error: error.message }
+
+    const { error: profileError } = await adminSupabase
         .from('profiles')
         .delete()
         .eq('id', id)
 
-    if (error) return { error: error.message }
+    if (profileError) return { error: profileError.message }
 
     revalidatePath('/admin')
     return { success: true }
@@ -131,16 +136,16 @@ export async function getUserTodos(userId: string) {
     if (roleError) return { error: roleError }
     if (!currentUserProfile?.is_admin) return { error: "Not authorized" }
 
-    // Get target user's profile to check if they're superadmin
+    // Get target profile
     const { data: targetProfile } = await adminSupabase
         .from('profiles')
-        .select('email')
+        .select('email, is_superadmin')
         .eq('id', userId)
         .single()
 
     // Only superadmins can view superadmin's tasks
-    const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
-    if (!isSuperadmin && targetProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
+    const isSuperadmin = currentUserProfile.is_superadmin
+    if (!isSuperadmin && targetProfile?.is_superadmin) {
         return { error: "Only superadmins can view superadmin's tasks." }
     }
 
@@ -165,13 +170,13 @@ export async function adminAddTodo(userId: string, task: string, priority: strin
     // Get target user's profile to check if they're superadmin
     const { data: targetProfile } = await adminSupabase
         .from('profiles')
-        .select('email')
+        .select('email, is_superadmin')
         .eq('id', userId)
         .single()
 
     // Only superadmins can add tasks to superadmin's list
-    const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
-    if (!isSuperadmin && targetProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
+    const isSuperadmin = currentUserProfile.is_superadmin
+    if (!isSuperadmin && targetProfile?.is_superadmin) {
         return { error: "Only superadmins can add tasks to superadmin's list." }
     }
 
@@ -203,13 +208,13 @@ export async function adminToggleTodo(todoId: string, is_completed: boolean) {
         // Get the owner's profile
         const { data: ownerProfile } = await adminSupabase
             .from('profiles')
-            .select('email')
+            .select('email, is_superadmin')
             .eq('id', todo.user_id)
             .single()
 
         // Only superadmins can modify superadmin's tasks
-        const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
-        if (!isSuperadmin && ownerProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
+        const isSuperadmin = currentUserProfile.is_superadmin
+        if (!isSuperadmin && ownerProfile?.is_superadmin) {
             return { error: "Only superadmins can modify superadmin's tasks." }
         }
     }
@@ -243,13 +248,13 @@ export async function adminDeleteTodo(todoId: string) {
         // Get the owner's profile
         const { data: ownerProfile } = await adminSupabase
             .from('profiles')
-            .select('email')
+            .select('email, is_superadmin')
             .eq('id', todo.user_id)
             .single()
 
         // Only superadmins can delete superadmin's tasks
-        const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
-        if (!isSuperadmin && ownerProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
+        const isSuperadmin = currentUserProfile.is_superadmin
+        if (!isSuperadmin && ownerProfile?.is_superadmin) {
             return { error: "Only superadmins can delete superadmin's tasks." }
         }
     }
@@ -283,13 +288,13 @@ export async function adminUpdateTodo(todoId: string, updates: any) {
         // Get the owner's profile
         const { data: ownerProfile } = await adminSupabase
             .from('profiles')
-            .select('email')
+            .select('email, is_superadmin')
             .eq('id', todo.user_id)
             .single()
 
         // Only superadmins can modify superadmin's tasks
-        const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
-        if (!isSuperadmin && ownerProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
+        const isSuperadmin = currentUserProfile.is_superadmin
+        if (!isSuperadmin && ownerProfile?.is_superadmin) {
             return { error: "Only superadmins can modify superadmin's tasks." }
         }
     }

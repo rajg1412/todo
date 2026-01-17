@@ -18,8 +18,14 @@ export default async function DashboardPage() {
         return redirect('/login')
     }
 
-    // Fetch todos - Superadmin sees everything
-    const isSuperadmin = user.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
+    // Fetch profile to check superadmin status from database
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_superadmin')
+        .eq('id', user.id)
+        .single()
+
+    const isSuperadmin = profile?.is_superadmin || false
 
     let query = supabase.from('todos').select('*')
 
