@@ -101,3 +101,36 @@ export async function signOut() {
     revalidatePath('/', 'layout')
     redirect('/login')
 }
+
+export async function forgotPassword(formData: FormData) {
+    const supabase = await createClient()
+    const email = formData.get('email') as string
+    const origin = (await headers()).get('origin')
+    const redirectTo = origin ? `${origin}/auth/callback?type=recovery` : `${getURL()}auth/callback?type=recovery`
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectTo,
+    })
+
+    if (error) {
+        return { error: error.message }
+    }
+
+    return { success: "Password reset link has been sent to your email." }
+}
+
+export async function updatePassword(formData: FormData) {
+    const supabase = await createClient()
+    const password = formData.get('password') as string
+
+    const { error } = await supabase.auth.updateUser({
+        password: password
+    })
+
+    if (error) {
+        return { error: error.message }
+    }
+
+    revalidatePath('/', 'layout')
+    return { success: "Password has been updated successfully." }
+}

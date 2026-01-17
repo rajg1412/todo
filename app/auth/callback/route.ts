@@ -12,6 +12,10 @@ export async function GET(request: Request) {
         const supabase = await createClient()
         const { error } = await supabase.auth.exchangeCodeForSession(code)
         if (!error) {
+            const type = searchParams.get('type')
+            const isRecovery = type === 'recovery'
+            const finalRedirect = isRecovery ? '/reset-password' : next
+
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
                 // Check if profile exists first to avoid overwriting is_admin
@@ -31,11 +35,11 @@ export async function GET(request: Request) {
             const isLocalEnv = process.env.NODE_ENV === 'development'
             if (isLocalEnv) {
                 // we can be sure that there's no proxy
-                return NextResponse.redirect(`${origin}${next}`)
+                return NextResponse.redirect(`${origin}${finalRedirect}`)
             } else if (forwardedHost) {
-                return NextResponse.redirect(`https://${forwardedHost}${next}`)
+                return NextResponse.redirect(`https://${forwardedHost}${finalRedirect}`)
             } else {
-                return NextResponse.redirect(`${origin}${next}`)
+                return NextResponse.redirect(`${origin}${finalRedirect}`)
             }
         }
     }
