@@ -5,6 +5,18 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { headers } from 'next/headers'
 
+const getURL = () => {
+    let url =
+        process?.env?.NEXT_PUBLIC_SITE_URL ?? // Set this to your site URL in Vercel env vars
+        process?.env?.NEXT_PUBLIC_VERCEL_URL ?? // Automatically set by Vercel
+        'http://localhost:3000/'
+    // Make sure to include `https://` when not localhost.
+    url = url.includes('http') ? url : `https://${url}`
+    // Make sure to include a trailing `/`.
+    url = url.endsWith('/') ? url : `${url}/`
+    return url
+}
+
 export async function login(formData: FormData) {
     const supabase = await createClient()
 
@@ -36,7 +48,7 @@ export async function signup(formData: FormData) {
         email,
         password,
         options: {
-            emailRedirectTo: `${(await headers()).get('origin')}/auth/callback`,
+            emailRedirectTo: `${getURL()}auth/callback`,
         },
     })
 
@@ -66,7 +78,7 @@ export async function signInWithGoogle() {
     const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: `${origin}/auth/callback`,
+            redirectTo: `${getURL()}auth/callback`,
         },
     })
 

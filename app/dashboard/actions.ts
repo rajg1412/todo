@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 
-export async function addTodo(task: string) {
+export async function addTodo(task: string, priority: string = "medium", label: string = "feature", status: string = "todo") {
     const supabase = await createClient()
 
     const {
@@ -15,7 +15,14 @@ export async function addTodo(task: string) {
     }
 
     const { error } = await supabase.from('todos').insert([
-        { task, user_id: user.id, is_completed: false },
+        {
+            task,
+            user_id: user.id,
+            is_completed: false,
+            priority,
+            label,
+            status: 'todo'
+        },
     ])
 
     if (error) {
@@ -49,6 +56,28 @@ export async function deleteTodo(id: string) {
 
     if (error) {
         console.error('Error deleting todo:', error.message)
+        return { error: error.message }
+    }
+
+    revalidatePath('/dashboard')
+}
+
+export async function updateTodo(id: string, updates: {
+    task?: string,
+    priority?: string,
+    label?: string,
+    status?: string,
+    is_completed?: boolean
+}) {
+    const supabase = await createClient()
+
+    const { error } = await supabase
+        .from('todos')
+        .update(updates)
+        .eq('id', id)
+
+    if (error) {
+        console.error('Error updating todo:', error.message)
         return { error: error.message }
     }
 
