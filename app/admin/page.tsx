@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/table"
 import { getAllProfiles, updateProfile, deleteUser } from './actions'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Shield, ShieldOff, UserMinus, User } from 'lucide-react'
+import { ArrowLeft, Shield, ShieldOff, UserMinus, User, Crown } from 'lucide-react'
 import { EditProfileDialog } from '@/components/admin/edit-profile-dialog'
 
 export default async function AdminPage() {
@@ -25,7 +25,7 @@ export default async function AdminPage() {
 
     if (!user) return redirect('/login')
 
-    const { profiles, error } = await getAllProfiles()
+    const { profiles, currentUserRole, error } = await getAllProfiles()
 
     if (error) {
         return (
@@ -89,15 +89,22 @@ export default async function AdminPage() {
                                     </TableCell>
                                     <TableCell className="text-sm">{profile.email}</TableCell>
                                     <TableCell>
-                                        {profile.is_admin ? (
-                                            <Badge variant="default" className="bg-primary/90">Admin</Badge>
-                                        ) : (
-                                            <Badge variant="secondary">User</Badge>
-                                        )}
+                                        <div className="flex gap-1">
+                                            {profile.email === 'rajg50103@gmail.com' ? (
+                                                <Badge variant="default" className="bg-gradient-to-r from-yellow-500 to-orange-500">
+                                                    <Crown className="h-3 w-3 mr-1" />
+                                                    Superadmin
+                                                </Badge>
+                                            ) : profile.is_admin ? (
+                                                <Badge variant="default" className="bg-primary/90">Admin</Badge>
+                                            ) : (
+                                                <Badge variant="secondary">User</Badge>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end items-center gap-2">
-                                            <EditProfileDialog profile={profile} />
+                                            <EditProfileDialog profile={profile} currentUserRole={currentUserRole} />
 
                                             <form action={async () => {
                                                 "use server";
@@ -107,14 +114,20 @@ export default async function AdminPage() {
                                                     variant="ghost"
                                                     size="sm"
                                                     type="submit"
-                                                    disabled={profile.id === user.id || profile.email === 'rajg50103@gmail.com'}
+                                                    disabled={
+                                                        profile.id === user.id ||
+                                                        profile.email === 'rajg50103@gmail.com' ||
+                                                        (currentUserRole?.email !== 'rajg50103@gmail.com' && profile.is_admin)
+                                                    }
                                                     className="h-8"
                                                     title={
                                                         profile.id === user.id
-                                                            ? "You cannot demote yourself"
+                                                            ? "You cannot modify yourself"
                                                             : profile.email === 'rajg50103@gmail.com'
-                                                                ? "This primary admin cannot be demoted"
-                                                                : ""
+                                                                ? "This primary superadmin cannot be modified"
+                                                                : currentUserRole?.email !== 'rajg50103@gmail.com' && profile.is_admin
+                                                                    ? "Only superadmins can modify admin accounts"
+                                                                    : ""
                                                     }
                                                 >
                                                     {profile.is_admin ? <ShieldOff className="mr-2 h-4 w-4" /> : <Shield className="mr-2 h-4 w-4" />}
@@ -131,13 +144,19 @@ export default async function AdminPage() {
                                                     size="icon"
                                                     className="h-8 w-8 text-destructive hover:bg-destructive/10"
                                                     type="submit"
-                                                    disabled={profile.id === user.id || profile.email === 'rajg50103@gmail.com'}
+                                                    disabled={
+                                                        profile.id === user.id ||
+                                                        profile.email === 'rajg50103@gmail.com' ||
+                                                        (currentUserRole?.email !== 'rajg50103@gmail.com' && profile.is_admin)
+                                                    }
                                                     title={
                                                         profile.id === user.id
                                                             ? "You cannot delete yourself"
                                                             : profile.email === 'rajg50103@gmail.com'
-                                                                ? "This primary admin cannot be deleted"
-                                                                : ""
+                                                                ? "This primary superadmin cannot be deleted"
+                                                                : currentUserRole?.email !== 'rajg50103@gmail.com' && profile.is_admin
+                                                                    ? "Only superadmins can delete admins"
+                                                                    : ""
                                                     }
                                                 >
                                                     <UserMinus className="h-4 w-4" />
