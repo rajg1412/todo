@@ -32,6 +32,7 @@ interface Profile {
     email: string | null
     full_name: string | null
     is_admin: boolean | null
+    is_superadmin: boolean | null
 }
 
 interface Todo {
@@ -45,7 +46,7 @@ interface Todo {
 
 interface EditProfileDialogProps {
     profile: Profile
-    currentUserRole?: { is_admin: boolean; email: string } | null
+    currentUserRole?: { is_admin: boolean; is_superadmin: boolean; email: string } | null
 }
 
 export function EditProfileDialog({ profile, currentUserRole }: EditProfileDialogProps) {
@@ -195,7 +196,7 @@ export function EditProfileDialog({ profile, currentUserRole }: EditProfileDialo
                         Profile
                     </button>
                     {/* Hide Tasks tab if non-superadmin trying to view superadmin's tasks */}
-                    {!(currentUserRole?.email !== process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL && profile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) && (
+                    {!(currentUserRole?.is_superadmin !== true && profile.is_superadmin) && (
                         <button
                             onClick={() => setActiveTab("tasks")}
                             className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "tasks"

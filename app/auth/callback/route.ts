@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
                 if (!profile) {
                     await supabase.from('profiles').insert([
-                        { id: user.id, email: user.email, is_admin: false }
+                        { id: user.id, email: user.email, is_admin: false, is_superadmin: false }
                     ])
                 }
             }

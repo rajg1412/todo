@@ -65,7 +65,8 @@ export async function signup(formData: FormData) {
                 id: data.user.id,
                 email: data.user.email,
                 full_name: fullName,
-                is_admin: false
+                is_admin: false,
+                is_superadmin: false
             }
         ])
     }
