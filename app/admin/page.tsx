@@ -90,7 +90,7 @@ export default async function AdminPage() {
                                     <TableCell className="text-sm">{profile.email}</TableCell>
                                     <TableCell>
                                         <div className="flex gap-1">
-                                            {profile.email === 'rajg50103@gmail.com' ? (
+                                            {profile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL ? (
                                                 <Badge variant="default" className="bg-gradient-to-r from-yellow-500 to-orange-500">
                                                     <Crown className="h-3 w-3 mr-1" />
                                                     Superadmin
@@ -116,16 +116,16 @@ export default async function AdminPage() {
                                                     type="submit"
                                                     disabled={
                                                         profile.id === user.id ||
-                                                        profile.email === 'rajg50103@gmail.com' ||
-                                                        (currentUserRole?.email !== 'rajg50103@gmail.com' && profile.is_admin)
+                                                        profile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL ||
+                                                        (currentUserRole?.email !== process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL && profile.is_admin)
                                                     }
                                                     className="h-8"
                                                     title={
                                                         profile.id === user.id
                                                             ? "You cannot modify yourself"
-                                                            : profile.email === 'rajg50103@gmail.com'
+                                                            : profile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
                                                                 ? "This primary superadmin cannot be modified"
-                                                                : currentUserRole?.email !== 'rajg50103@gmail.com' && profile.is_admin
+                                                                : currentUserRole?.email !== process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL && profile.is_admin
                                                                     ? "Only superadmins can modify admin accounts"
                                                                     : ""
                                                     }
@@ -146,15 +146,15 @@ export default async function AdminPage() {
                                                     type="submit"
                                                     disabled={
                                                         profile.id === user.id ||
-                                                        profile.email === 'rajg50103@gmail.com' ||
-                                                        (currentUserRole?.email !== 'rajg50103@gmail.com' && profile.is_admin)
+                                                        profile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL ||
+                                                        (currentUserRole?.email !== process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL && profile.is_admin)
                                                     }
                                                     title={
                                                         profile.id === user.id
                                                             ? "You cannot delete yourself"
-                                                            : profile.email === 'rajg50103@gmail.com'
+                                                            : profile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
                                                                 ? "This primary superadmin cannot be deleted"
-                                                                : currentUserRole?.email !== 'rajg50103@gmail.com' && profile.is_admin
+                                                                : currentUserRole?.email !== process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL && profile.is_admin
                                                                     ? "Only superadmins can delete admins"
                                                                     : ""
                                                     }

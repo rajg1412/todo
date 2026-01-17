@@ -61,12 +61,12 @@ export async function updateProfile(id: string, updates: any) {
         .single()
 
     // Prevent modifying the primary superadmin
-    if (targetProfile?.email === 'rajg50103@gmail.com') {
+    if (targetProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
         return { error: "This primary superadmin account cannot be modified." }
     }
 
     // Role-based authorization checks
-    const isSuperadmin = currentUserProfile.email === 'rajg50103@gmail.com'
+    const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
     const isTargetAdmin = targetProfile?.is_admin
 
     // Regular admins can ONLY modify regular users (not other admins)
@@ -102,12 +102,12 @@ export async function deleteUser(id: string) {
         .single()
 
     // Prevent deleting the primary superadmin
-    if (targetProfile?.email === 'rajg50103@gmail.com') {
+    if (targetProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
         return { error: "This primary superadmin account cannot be deleted." }
     }
 
     // Only superadmins can delete admins
-    const isSuperadmin = currentUserProfile.email === 'rajg50103@gmail.com'
+    const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
     if (!isSuperadmin && targetProfile?.is_admin) {
         return { error: "Only superadmins can delete admins." }
     }
@@ -139,8 +139,8 @@ export async function getUserTodos(userId: string) {
         .single()
 
     // Only superadmins can view superadmin's tasks
-    const isSuperadmin = currentUserProfile.email === 'rajg50103@gmail.com'
-    if (!isSuperadmin && targetProfile?.email === 'rajg50103@gmail.com') {
+    const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
+    if (!isSuperadmin && targetProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
         return { error: "Only superadmins can view superadmin's tasks." }
     }
 
@@ -154,7 +154,7 @@ export async function getUserTodos(userId: string) {
     return { todos }
 }
 
-export async function adminAddTodo(userId: string, task: string) {
+export async function adminAddTodo(userId: string, task: string, priority: string = "medium", label: string = "feature") {
     const adminSupabase = await createAdminClient()
 
     // Get current user's role
@@ -170,14 +170,14 @@ export async function adminAddTodo(userId: string, task: string) {
         .single()
 
     // Only superadmins can add tasks to superadmin's list
-    const isSuperadmin = currentUserProfile.email === 'rajg50103@gmail.com'
-    if (!isSuperadmin && targetProfile?.email === 'rajg50103@gmail.com') {
+    const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
+    if (!isSuperadmin && targetProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
         return { error: "Only superadmins can add tasks to superadmin's list." }
     }
 
     const { error } = await adminSupabase
         .from('todos')
-        .insert([{ user_id: userId, task, is_completed: false }])
+        .insert([{ user_id: userId, task, is_completed: false, priority, label, status: 'todo' }])
 
     if (error) return { error: error.message }
     revalidatePath('/admin')
@@ -208,8 +208,8 @@ export async function adminToggleTodo(todoId: string, is_completed: boolean) {
             .single()
 
         // Only superadmins can modify superadmin's tasks
-        const isSuperadmin = currentUserProfile.email === 'rajg50103@gmail.com'
-        if (!isSuperadmin && ownerProfile?.email === 'rajg50103@gmail.com') {
+        const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
+        if (!isSuperadmin && ownerProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
             return { error: "Only superadmins can modify superadmin's tasks." }
         }
     }
@@ -248,8 +248,8 @@ export async function adminDeleteTodo(todoId: string) {
             .single()
 
         // Only superadmins can delete superadmin's tasks
-        const isSuperadmin = currentUserProfile.email === 'rajg50103@gmail.com'
-        if (!isSuperadmin && ownerProfile?.email === 'rajg50103@gmail.com') {
+        const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
+        if (!isSuperadmin && ownerProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
             return { error: "Only superadmins can delete superadmin's tasks." }
         }
     }
@@ -261,5 +261,46 @@ export async function adminDeleteTodo(todoId: string) {
 
     if (error) return { error: error.message }
     revalidatePath('/admin')
+    return { success: true }
+}
+
+export async function adminUpdateTodo(todoId: string, updates: any) {
+    const adminSupabase = await createAdminClient()
+
+    // Get current user's role
+    const { profile: currentUserProfile, error: roleError } = await getCurrentUserRole()
+    if (roleError) return { error: roleError }
+    if (!currentUserProfile?.is_admin) return { error: "Not authorized" }
+
+    // Get the todo to find its owner
+    const { data: todo } = await adminSupabase
+        .from('todos')
+        .select('user_id')
+        .eq('id', todoId)
+        .single()
+
+    if (todo) {
+        // Get the owner's profile
+        const { data: ownerProfile } = await adminSupabase
+            .from('profiles')
+            .select('email')
+            .eq('id', todo.user_id)
+            .single()
+
+        // Only superadmins can modify superadmin's tasks
+        const isSuperadmin = currentUserProfile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
+        if (!isSuperadmin && ownerProfile?.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) {
+            return { error: "Only superadmins can modify superadmin's tasks." }
+        }
+    }
+
+    const { error } = await adminSupabase
+        .from('todos')
+        .update(updates)
+        .eq('id', todoId)
+
+    if (error) return { error: error.message }
+    revalidatePath('/admin')
+    revalidatePath('/dashboard')
     return { success: true }
 }

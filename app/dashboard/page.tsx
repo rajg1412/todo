@@ -3,7 +3,9 @@ import Link from 'next/link'
 import { createClient } from '@/utils/supabase/server'
 import { Button } from '@/components/ui/button'
 import { signOut } from '@/app/auth/actions'
-import { TodoList } from '@/components/dashboard/todo-list'
+import { DataTable } from '@/components/data-table/data-table'
+import { columns } from '@/components/data-table/columns'
+import { AddTaskDialog } from '@/components/dashboard/add-task-dialog'
 
 export default async function DashboardPage() {
     const supabase = await createClient()
@@ -16,12 +18,16 @@ export default async function DashboardPage() {
         return redirect('/login')
     }
 
-    // Fetch todos
-    const { data: todos } = await supabase
-        .from('todos')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
+    // Fetch todos - Superadmin sees everything
+    const isSuperadmin = user.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL
+
+    let query = supabase.from('todos').select('*')
+
+    if (!isSuperadmin) {
+        query = query.eq('user_id', user.id)
+    }
+
+    const { data: todos } = await query.order('created_at', { ascending: false })
 
     // Fetch profile to check admin status and get name
     const { data: profile } = await supabase
@@ -53,8 +59,30 @@ export default async function DashboardPage() {
                     </div>
                 </header>
 
-                <div className="grid gap-8 md:grid-cols-1">
-                    <TodoList initialTodos={todos || []} />
+                <div className="flex items-center justify-between space-y-2">
+                    <div>
+                        <h2 className="text-2xl font-bold tracking-tight">Main Tasks</h2>
+                        <p className="text-muted-foreground">
+                            Here&apos;s a list of your tasks for this month!
+                        </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <AddTaskDialog />
+                    </div>
+                </div>
+
+                <div className="space-y-4">
+                    <DataTable
+                        data={todos?.map(todo => ({
+                            id: `TASK-${todo.id.toString().slice(0, 4)}`,
+                            realId: todo.id,
+                            title: todo.task,
+                            status: todo.status || (todo.is_completed ? "done" : "todo"),
+                            label: todo.label || "feature",
+                            priority: todo.priority || "medium",
+                        })) || []}
+                        columns={columns}
+                    />
                 </div>
             </div>
         </div>

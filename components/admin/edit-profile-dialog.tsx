@@ -23,7 +23,8 @@ import {
     getUserTodos,
     adminAddTodo,
     adminToggleTodo,
-    adminDeleteTodo
+    adminDeleteTodo,
+    adminUpdateTodo
 } from "@/app/admin/actions"
 
 interface Profile {
@@ -37,6 +38,8 @@ interface Todo {
     id: string
     task: string
     is_completed: boolean
+    priority: string
+    label: string
     created_at: string
 }
 
@@ -55,6 +58,8 @@ export function EditProfileDialog({ profile, currentUserRole }: EditProfileDialo
     const [todos, setTodos] = React.useState<Todo[]>([])
     const [isTodosLoading, setIsTodosLoading] = React.useState(false)
     const [newTask, setNewTask] = React.useState("")
+    const [newTaskPriority, setNewTaskPriority] = React.useState("medium")
+    const [newTaskLabel, setNewTaskLabel] = React.useState("feature")
 
     const router = useRouter()
 
@@ -105,12 +110,14 @@ export function EditProfileDialog({ profile, currentUserRole }: EditProfileDialo
         if (!newTask.trim()) return
         setIsTodosLoading(true)
         try {
-            const result = await adminAddTodo(profile.id, newTask)
+            const result = await adminAddTodo(profile.id, newTask, newTaskPriority, newTaskLabel)
             if (result.error) {
                 toast.error(result.error)
             } else {
                 toast.success("Task added")
                 setNewTask("")
+                setNewTaskPriority("medium")
+                setNewTaskLabel("feature")
                 fetchTodos()
             }
         } catch (error) {
@@ -147,6 +154,19 @@ export function EditProfileDialog({ profile, currentUserRole }: EditProfileDialo
         }
     }
 
+    async function handleUpdateTodo(todoId: string, updates: any) {
+        try {
+            const result = await adminUpdateTodo(todoId, updates)
+            if (result.error) {
+                toast.error(result.error)
+            } else {
+                setTodos(todos.map(t => t.id === todoId ? { ...t, ...updates } : t))
+            }
+        } catch (error) {
+            toast.error("Failed to update task")
+        }
+    }
+
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
@@ -175,7 +195,7 @@ export function EditProfileDialog({ profile, currentUserRole }: EditProfileDialo
                         Profile
                     </button>
                     {/* Hide Tasks tab if non-superadmin trying to view superadmin's tasks */}
-                    {!(currentUserRole?.email !== 'rajg50103@gmail.com' && profile.email === 'rajg50103@gmail.com') && (
+                    {!(currentUserRole?.email !== process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL && profile.email === process.env.NEXT_PUBLIC_SUPERADMIN_EMAIL) && (
                         <button
                             onClick={() => setActiveTab("tasks")}
                             className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "tasks"
@@ -226,17 +246,47 @@ export function EditProfileDialog({ profile, currentUserRole }: EditProfileDialo
                         </form>
                     ) : (
                         <div className="space-y-4">
-                            <form onSubmit={handleAddTodo} className="flex gap-2">
-                                <Input
-                                    placeholder="Add a task for this user..."
-                                    value={newTask}
-                                    onChange={(e) => setNewTask(e.target.value)}
-                                    disabled={isTodosLoading}
-                                    className="h-9"
-                                />
-                                <Button type="submit" size="sm" disabled={isTodosLoading || !newTask.trim()}>
-                                    {isTodosLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                                </Button>
+                            <form onSubmit={handleAddTodo} className="space-y-3">
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="Add a task for this user..."
+                                        value={newTask}
+                                        onChange={(e) => setNewTask(e.target.value)}
+                                        disabled={isTodosLoading}
+                                        className="h-9"
+                                    />
+                                    <Button type="submit" size="sm" disabled={isTodosLoading || !newTask.trim()}>
+                                        {isTodosLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                                    </Button>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Priority</label>
+                                        <select
+                                            value={newTaskPriority}
+                                            onChange={(e) => setNewTaskPriority(e.target.value)}
+                                            className="w-full h-8 text-xs rounded-md border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
+                                            disabled={isTodosLoading}
+                                        >
+                                            <option value="low">Low</option>
+                                            <option value="medium">Medium</option>
+                                            <option value="high">High</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] uppercase font-bold text-muted-foreground">Label</label>
+                                        <select
+                                            value={newTaskLabel}
+                                            onChange={(e) => setNewTaskLabel(e.target.value)}
+                                            className="w-full h-8 text-xs rounded-md border bg-background px-2 outline-none focus:ring-1 focus:ring-ring"
+                                            disabled={isTodosLoading}
+                                        >
+                                            <option value="feature">Feature</option>
+                                            <option value="bug">Bug</option>
+                                            <option value="documentation">Documentation</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </form>
 
                             <Separator />
@@ -256,24 +306,46 @@ export function EditProfileDialog({ profile, currentUserRole }: EditProfileDialo
                                         {todos.map((todo) => (
                                             <div
                                                 key={todo.id}
-                                                className={`flex items-center gap-3 p-2 rounded-md border transition-all ${todo.is_completed ? "bg-muted/30 opacity-70" : "bg-card shadow-sm"
+                                                className={`flex flex-col gap-2 p-3 rounded-md border transition-all ${todo.is_completed ? "bg-muted/30 opacity-70" : "bg-card shadow-sm"
                                                     }`}
                                             >
-                                                <Checkbox
-                                                    checked={todo.is_completed}
-                                                    onCheckedChange={() => handleToggleTodo(todo.id, todo.is_completed)}
-                                                />
-                                                <span className={`text-sm flex-1 break-words ${todo.is_completed ? "line-through" : ""}`}>
-                                                    {todo.task}
-                                                </span>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-7 w-7 text-destructive hover:bg-destructive/10"
-                                                    onClick={() => handleDeleteTodo(todo.id)}
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </Button>
+                                                <div className="flex items-center gap-3">
+                                                    <Checkbox
+                                                        checked={todo.is_completed}
+                                                        onCheckedChange={() => handleToggleTodo(todo.id, todo.is_completed)}
+                                                    />
+                                                    <span className={`text-sm flex-1 break-words font-medium ${todo.is_completed ? "line-through" : ""}`}>
+                                                        {todo.task}
+                                                    </span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 text-destructive hover:bg-destructive/10"
+                                                        onClick={() => handleDeleteTodo(todo.id)}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                                <div className="flex gap-2 pl-7">
+                                                    <select
+                                                        value={todo.priority}
+                                                        onChange={(e) => handleUpdateTodo(todo.id, { priority: e.target.value })}
+                                                        className="h-7 text-[10px] rounded-md border bg-background px-1 outline-none font-bold uppercase tracking-tight"
+                                                    >
+                                                        <option value="low">Low</option>
+                                                        <option value="medium">Medium</option>
+                                                        <option value="high">High</option>
+                                                    </select>
+                                                    <select
+                                                        value={todo.label}
+                                                        onChange={(e) => handleUpdateTodo(todo.id, { label: e.target.value })}
+                                                        className="h-7 text-[10px] rounded-md border bg-background px-1 outline-none font-bold uppercase tracking-tight"
+                                                    >
+                                                        <option value="feature">Feature</option>
+                                                        <option value="bug">Bug</option>
+                                                        <option value="documentation">Documentation</option>
+                                                    </select>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
