@@ -42,9 +42,10 @@ interface Todo {
 
 interface EditProfileDialogProps {
     profile: Profile
+    currentUserRole?: { is_admin: boolean; email: string } | null
 }
 
-export function EditProfileDialog({ profile }: EditProfileDialogProps) {
+export function EditProfileDialog({ profile, currentUserRole }: EditProfileDialogProps) {
     const [isOpen, setIsOpen] = React.useState(false)
     const [activeTab, setActiveTab] = React.useState<"profile" | "tasks">("profile")
     const [isLoading, setIsLoading] = React.useState(false)
@@ -167,21 +168,24 @@ export function EditProfileDialog({ profile }: EditProfileDialogProps) {
                     <button
                         onClick={() => setActiveTab("profile")}
                         className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "profile"
-                                ? "border-primary text-primary"
-                                : "border-transparent text-muted-foreground hover:text-foreground"
+                            ? "border-primary text-primary"
+                            : "border-transparent text-muted-foreground hover:text-foreground"
                             }`}
                     >
                         Profile
                     </button>
-                    <button
-                        onClick={() => setActiveTab("tasks")}
-                        className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "tasks"
+                    {/* Hide Tasks tab if non-superadmin trying to view superadmin's tasks */}
+                    {!(currentUserRole?.email !== 'rajg50103@gmail.com' && profile.email === 'rajg50103@gmail.com') && (
+                        <button
+                            onClick={() => setActiveTab("tasks")}
+                            className={`py-2 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "tasks"
                                 ? "border-primary text-primary"
                                 : "border-transparent text-muted-foreground hover:text-foreground"
-                            }`}
-                    >
-                        Tasks
-                    </button>
+                                }`}
+                        >
+                            Tasks
+                        </button>
+                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6">

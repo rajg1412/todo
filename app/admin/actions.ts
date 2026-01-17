@@ -3,6 +3,21 @@
 import { revalidatePath } from 'next/cache'
 import { createClient, createAdminClient } from '@/utils/supabase/server'
 
+// Helper function to get current user's role
+export async function getCurrentUserRole() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: "Not authenticated" }
+
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin, email')
+        .eq('id', user.id)
+        .single()
+
+    return { profile, userId: user.id }
+}
+
 export async function getAllProfiles() {
     const supabase = await createClient()
 
@@ -12,7 +27,7 @@ export async function getAllProfiles() {
 
     const { data: profile } = await supabase
         .from('profiles')
-        .select('is_admin')
+        .select('is_admin, email')
         .eq('id', user.id)
         .single()
 
@@ -26,24 +41,40 @@ export async function getAllProfiles() {
         .order('email')
 
     if (error) return { error: error.message }
-    return { profiles }
+
+    return { profiles, currentUserRole: profile }
 }
 
 export async function updateProfile(id: string, updates: any) {
-    const supabase = await createAdminClient()
+    const adminSupabase = await createAdminClient()
 
-    // Protected Admin Email check
-    const { data: profile } = await supabase
+    // Get current user's role
+    const { profile: currentUserProfile, userId: currentUserId, error: roleError } = await getCurrentUserRole()
+    if (roleError) return { error: roleError }
+    if (!currentUserProfile?.is_admin) return { error: "Not authorized" }
+
+    // Get target profile
+    const { data: targetProfile } = await adminSupabase
         .from('profiles')
-        .select('email')
+        .select('email, is_admin')
         .eq('id', id)
         .single()
 
-    if (profile?.email === 'rajg50103@gmail.com') {
-        return { error: "This primary admin account cannot be modified." }
+    // Prevent modifying the primary superadmin
+    if (targetProfile?.email === 'rajg50103@gmail.com') {
+        return { error: "This primary superadmin account cannot be modified." }
     }
 
-    const { error } = await supabase
+    // Role-based authorization checks
+    const isSuperadmin = currentUserProfile.email === 'rajg50103@gmail.com'
+    const isTargetAdmin = targetProfile?.is_admin
+
+    // Regular admins can ONLY modify regular users (not other admins)
+    if (!isSuperadmin && isTargetAdmin) {
+        return { error: "Only superadmins can modify admin accounts." }
+    }
+
+    const { error } = await adminSupabase
         .from('profiles')
         .update(updates)
         .eq('id', id)
@@ -56,20 +87,32 @@ export async function updateProfile(id: string, updates: any) {
 }
 
 export async function deleteUser(id: string) {
-    const supabase = await createAdminClient()
+    const adminSupabase = await createAdminClient()
 
-    // Protected Admin Email check
-    const { data: profile } = await supabase
+    // Get current user's role
+    const { profile: currentUserProfile, error: roleError } = await getCurrentUserRole()
+    if (roleError) return { error: roleError }
+    if (!currentUserProfile?.is_admin) return { error: "Not authorized" }
+
+    // Get target profile
+    const { data: targetProfile } = await adminSupabase
         .from('profiles')
-        .select('email')
+        .select('email, is_admin')
         .eq('id', id)
         .single()
 
-    if (profile?.email === 'rajg50103@gmail.com') {
-        return { error: "This primary admin account cannot be deleted." }
+    // Prevent deleting the primary superadmin
+    if (targetProfile?.email === 'rajg50103@gmail.com') {
+        return { error: "This primary superadmin account cannot be deleted." }
     }
 
-    const { error } = await supabase
+    // Only superadmins can delete admins
+    const isSuperadmin = currentUserProfile.email === 'rajg50103@gmail.com'
+    if (!isSuperadmin && targetProfile?.is_admin) {
+        return { error: "Only superadmins can delete admins." }
+    }
+
+    const { error } = await adminSupabase
         .from('profiles')
         .delete()
         .eq('id', id)
@@ -81,8 +124,27 @@ export async function deleteUser(id: string) {
 }
 
 export async function getUserTodos(userId: string) {
-    const supabase = await createAdminClient()
-    const { data: todos, error } = await supabase
+    const adminSupabase = await createAdminClient()
+
+    // Get current user's role
+    const { profile: currentUserProfile, error: roleError } = await getCurrentUserRole()
+    if (roleError) return { error: roleError }
+    if (!currentUserProfile?.is_admin) return { error: "Not authorized" }
+
+    // Get target user's profile to check if they're superadmin
+    const { data: targetProfile } = await adminSupabase
+        .from('profiles')
+        .select('email')
+        .eq('id', userId)
+        .single()
+
+    // Only superadmins can view superadmin's tasks
+    const isSuperadmin = currentUserProfile.email === 'rajg50103@gmail.com'
+    if (!isSuperadmin && targetProfile?.email === 'rajg50103@gmail.com') {
+        return { error: "Only superadmins can view superadmin's tasks." }
+    }
+
+    const { data: todos, error } = await adminSupabase
         .from('todos')
         .select('*')
         .eq('user_id', userId)
@@ -93,8 +155,27 @@ export async function getUserTodos(userId: string) {
 }
 
 export async function adminAddTodo(userId: string, task: string) {
-    const supabase = await createAdminClient()
-    const { error } = await supabase
+    const adminSupabase = await createAdminClient()
+
+    // Get current user's role
+    const { profile: currentUserProfile, error: roleError } = await getCurrentUserRole()
+    if (roleError) return { error: roleError }
+    if (!currentUserProfile?.is_admin) return { error: "Not authorized" }
+
+    // Get target user's profile to check if they're superadmin
+    const { data: targetProfile } = await adminSupabase
+        .from('profiles')
+        .select('email')
+        .eq('id', userId)
+        .single()
+
+    // Only superadmins can add tasks to superadmin's list
+    const isSuperadmin = currentUserProfile.email === 'rajg50103@gmail.com'
+    if (!isSuperadmin && targetProfile?.email === 'rajg50103@gmail.com') {
+        return { error: "Only superadmins can add tasks to superadmin's list." }
+    }
+
+    const { error } = await adminSupabase
         .from('todos')
         .insert([{ user_id: userId, task, is_completed: false }])
 
@@ -104,8 +185,36 @@ export async function adminAddTodo(userId: string, task: string) {
 }
 
 export async function adminToggleTodo(todoId: string, is_completed: boolean) {
-    const supabase = await createAdminClient()
-    const { error } = await supabase
+    const adminSupabase = await createAdminClient()
+
+    // Get current user's role
+    const { profile: currentUserProfile, error: roleError } = await getCurrentUserRole()
+    if (roleError) return { error: roleError }
+    if (!currentUserProfile?.is_admin) return { error: "Not authorized" }
+
+    // Get the todo to find its owner
+    const { data: todo } = await adminSupabase
+        .from('todos')
+        .select('user_id')
+        .eq('id', todoId)
+        .single()
+
+    if (todo) {
+        // Get the owner's profile
+        const { data: ownerProfile } = await adminSupabase
+            .from('profiles')
+            .select('email')
+            .eq('id', todo.user_id)
+            .single()
+
+        // Only superadmins can modify superadmin's tasks
+        const isSuperadmin = currentUserProfile.email === 'rajg50103@gmail.com'
+        if (!isSuperadmin && ownerProfile?.email === 'rajg50103@gmail.com') {
+            return { error: "Only superadmins can modify superadmin's tasks." }
+        }
+    }
+
+    const { error } = await adminSupabase
         .from('todos')
         .update({ is_completed })
         .eq('id', todoId)
@@ -116,8 +225,36 @@ export async function adminToggleTodo(todoId: string, is_completed: boolean) {
 }
 
 export async function adminDeleteTodo(todoId: string) {
-    const supabase = await createAdminClient()
-    const { error } = await supabase
+    const adminSupabase = await createAdminClient()
+
+    // Get current user's role
+    const { profile: currentUserProfile, error: roleError } = await getCurrentUserRole()
+    if (roleError) return { error: roleError }
+    if (!currentUserProfile?.is_admin) return { error: "Not authorized" }
+
+    // Get the todo to find its owner
+    const { data: todo } = await adminSupabase
+        .from('todos')
+        .select('user_id')
+        .eq('id', todoId)
+        .single()
+
+    if (todo) {
+        // Get the owner's profile
+        const { data: ownerProfile } = await adminSupabase
+            .from('profiles')
+            .select('email')
+            .eq('id', todo.user_id)
+            .single()
+
+        // Only superadmins can delete superadmin's tasks
+        const isSuperadmin = currentUserProfile.email === 'rajg50103@gmail.com'
+        if (!isSuperadmin && ownerProfile?.email === 'rajg50103@gmail.com') {
+            return { error: "Only superadmins can delete superadmin's tasks." }
+        }
+    }
+
+    const { error } = await adminSupabase
         .from('todos')
         .delete()
         .eq('id', todoId)
