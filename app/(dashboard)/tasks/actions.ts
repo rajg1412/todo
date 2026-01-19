@@ -3,7 +3,14 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/utils/supabase/server'
 
-export async function addTodo(task: string, priority: string = "medium", label: string = "feature", status: string = "todo") {
+export async function addTodo(
+    task: string,
+    priority: string = "medium",
+    label: string = "feature",
+    status: string = "todo",
+    description?: string,
+    attachment_url?: string
+) {
     const supabase = await createClient()
 
     const {
@@ -21,7 +28,9 @@ export async function addTodo(task: string, priority: string = "medium", label: 
             is_completed: false,
             priority,
             label,
-            status: 'todo'
+            status: status || 'todo',
+            description,
+            attachment_url
         },
     ])
 
@@ -30,7 +39,7 @@ export async function addTodo(task: string, priority: string = "medium", label: 
         return { error: error.message }
     }
 
-    revalidatePath('/dashboard')
+    revalidatePath('/tasks')
 }
 
 export async function toggleTodo(id: string, is_completed: boolean) {
@@ -46,7 +55,7 @@ export async function toggleTodo(id: string, is_completed: boolean) {
         return { error: error.message }
     }
 
-    revalidatePath('/dashboard')
+    revalidatePath('/tasks')
 }
 
 export async function deleteTodo(id: string) {
@@ -59,7 +68,7 @@ export async function deleteTodo(id: string) {
         return { error: error.message }
     }
 
-    revalidatePath('/dashboard')
+    revalidatePath('/tasks')
 }
 
 export async function updateTodo(id: string, updates: {
@@ -81,5 +90,5 @@ export async function updateTodo(id: string, updates: {
         return { error: error.message }
     }
 
-    revalidatePath('/dashboard')
+    revalidatePath('/tasks')
 }

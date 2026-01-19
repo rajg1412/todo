@@ -56,7 +56,7 @@ export async function updateProfile(id: string, updates: any) {
     // Get target profile
     const { data: targetProfile } = await adminSupabase
         .from('profiles')
-        .select('email, is_admin')
+        .select('email, is_admin, is_superadmin')
         .eq('id', id)
         .single()
 
@@ -82,7 +82,7 @@ export async function updateProfile(id: string, updates: any) {
     if (error) return { error: error.message }
 
     revalidatePath('/admin')
-    revalidatePath('/dashboard')
+    revalidatePath('/tasks')
     return { success: true }
 }
 
@@ -306,6 +306,6 @@ export async function adminUpdateTodo(todoId: string, updates: any) {
 
     if (error) return { error: error.message }
     revalidatePath('/admin')
-    revalidatePath('/dashboard')
+    revalidatePath('/tasks')
     return { success: true }
 }

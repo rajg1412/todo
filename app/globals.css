@@ -123,3 +123,35 @@
     @apply bg-background text-foreground;
   }
 }
+
+.document-html-content h1 {
+  @apply text-3xl font-bold mb-4 mt-6 text-foreground;
+}
+
+.document-html-content h2 {
+  @apply text-2xl font-semibold mb-3 mt-5 text-foreground;
+}
+
+.document-html-content h3 {
+  @apply text-xl font-medium mb-2 mt-4 text-foreground;
+}
+
+.document-html-content p {
+  @apply mb-4 leading-relaxed text-muted-foreground;
+}
+
+.document-html-content strong, .document-html-content b {
+  @apply font-bold text-foreground;
+}
+
+.document-html-content ul {
+  @apply list-disc list-inside mb-4 space-y-1;
+}
+
+.document-html-content ol {
+  @apply list-decimal list-inside mb-4 space-y-1;
+}
+
+.document-html-content li {
+  @apply text-muted-foreground;
+}

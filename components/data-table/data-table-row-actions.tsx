@@ -4,7 +4,6 @@ import * as React from "react"
 import { DotsHorizontalIcon } from "@radix-ui/react-icons"
 import { Row } from "@tanstack/react-table"
 import { toast } from "sonner"
-import { deleteTodo, toggleTodo, updateTodo } from "@/app/dashboard/actions"
 import { EditTaskDialog } from "@/components/dashboard/edit-task-dialog"
 
 import { Button } from "@/components/ui/button"
@@ -12,17 +11,9 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuRadioGroup,
-    DropdownMenuRadioItem,
     DropdownMenuSeparator,
-    DropdownMenuShortcut,
-    DropdownMenuSub,
-    DropdownMenuSubContent,
-    DropdownMenuSubTrigger,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-import { labels } from "./columns"
 
 interface DataTableRowActionsProps<TData> {
     row: Row<TData>
@@ -35,14 +26,6 @@ export function DataTableRowActions<TData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const task = (row.original as any)
 
-    async function handleDelete() {
-        const result = await deleteTodo(task.realId)
-        if (result?.error) {
-            toast.error(result.error)
-        } else {
-            toast.success("Task deleted")
-        }
-    }
 
     return (
         <>
@@ -62,37 +45,25 @@ export function DataTableRowActions<TData>({
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[160px]">
-                    <DropdownMenuItem onClick={() => setIsEditOpen(true)}>Edit</DropdownMenuItem>
-                    <DropdownMenuItem>Make a copy</DropdownMenuItem>
-                    <DropdownMenuItem>Favorite</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuSub>
-                        <DropdownMenuSubTrigger>Labels</DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent>
-                            <DropdownMenuRadioGroup
-                                value={task.label}
-                                onValueChange={async (value) => {
-                                    const result = await updateTodo(task.realId, { label: value })
-                                    if (result?.error) {
-                                        toast.error(result.error)
-                                    } else {
-                                        toast.success("Label updated")
-                                    }
-                                }}
-                            >
-                                {labels.map((label) => (
-                                    <DropdownMenuRadioItem key={label.value} value={label.value}>
-                                        {label.label}
-                                    </DropdownMenuRadioItem>
-                                ))}
-                            </DropdownMenuRadioGroup>
-                        </DropdownMenuSubContent>
-                    </DropdownMenuSub>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleDelete}>
-                        Delete
-                        <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
+                    <DropdownMenuItem onClick={() => setIsEditOpen(true)}>View Details</DropdownMenuItem>
+                    <DropdownMenuItem
+                        onClick={() => {
+                            navigator.clipboard.writeText(task.id)
+                            toast.success("Task ID copied to clipboard")
+                        }}
+                    >
+                        Copy Task ID
                     </DropdownMenuItem>
+                    {task.attachment_url && (
+                        <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                                onClick={() => window.open(task.attachment_url, '_blank')}
+                            >
+                                View Attachment
+                            </DropdownMenuItem>
+                        </>
+                    )}
                 </DropdownMenuContent>
             </DropdownMenu>
         </>

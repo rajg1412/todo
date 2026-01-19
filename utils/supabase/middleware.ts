@@ -58,7 +58,7 @@ export async function updateSession(request: NextRequest) {
 
         if (!profile?.is_admin) {
             const url = request.nextUrl.clone()
-            url.pathname = '/dashboard'
+            url.pathname = '/tasks'
             return NextResponse.redirect(url)
         }
     }
