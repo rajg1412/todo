@@ -35,7 +35,7 @@ export default function ResetPasswordPage() {
             setIsLoading(false)
         } else if (result?.success) {
             toast.success(result.success)
-            router.push('/dashboard')
+            router.push('/tasks')
         }
     }
 

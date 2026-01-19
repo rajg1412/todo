@@ -34,7 +34,7 @@ export default async function AdminPage() {
                     <h1 className="text-2xl font-bold text-destructive">Access Denied</h1>
                     <p className="text-muted-foreground">{error}</p>
                     <Button asChild className="mt-4">
-                        <Link href="/dashboard">Back to Dashboard</Link>
+                        <Link href="/tasks">Back to Dashboard</Link>
                     </Button>
                 </div>
             </div>
@@ -46,7 +46,7 @@ export default async function AdminPage() {
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <Button asChild variant="ghost" size="icon">
-                        <Link href="/dashboard"><ArrowLeft className="h-4 w-4" /></Link>
+                        <Link href="/tasks"><ArrowLeft className="h-4 w-4" /></Link>
                     </Button>
                     <h1 className="text-3xl font-bold tracking-tight">Admin Management</h1>
                 </div>

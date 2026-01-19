@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { DataTableColumnHeader } from "./data-table-column-header"
 import { DataTableRowActions } from "./data-table-row-actions"
 import { CheckCircledIcon, CircleIcon, CrossCircledIcon, QuestionMarkCircledIcon, StopwatchIcon, ArrowUpIcon, ArrowDownIcon, ArrowRightIcon } from "@radix-ui/react-icons"
+import { Link2 } from "lucide-react"
 
 export type Task = {
     id: string
@@ -13,6 +14,8 @@ export type Task = {
     status: string
     label: string
     priority: string
+    description?: string
+    attachment_url?: string
 }
 
 export const labels = [
@@ -117,13 +120,25 @@ export const columns: ColumnDef<Task>[] = [
         ),
         cell: ({ row }) => {
             const label = labels.find((label) => label.value === row.original.label)
+            const attachmentUrl = row.original.attachment_url
 
             return (
-                <div className="flex space-x-2">
+                <div className="flex items-center space-x-2">
                     {label && <Badge variant="outline">{label.label}</Badge>}
                     <span className="max-w-[500px] truncate font-medium">
                         {row.getValue("title")}
                     </span>
+                    {attachmentUrl && (
+                        <a
+                            href={attachmentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-muted-foreground hover:text-primary transition-colors"
+                            title="View attachment"
+                        >
+                            <Link2 className="h-3.5 w-3.5" />
+                        </a>
+                    )}
                 </div>
             )
         },

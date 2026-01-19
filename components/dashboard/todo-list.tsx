@@ -14,7 +14,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { addTodo, toggleTodo, deleteTodo } from "@/app/dashboard/actions"
+import { addTodo, toggleTodo, deleteTodo } from "@/app/(dashboard)/tasks/actions"
 
 interface Todo {
     id: string

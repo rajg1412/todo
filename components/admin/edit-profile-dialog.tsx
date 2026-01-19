@@ -25,7 +25,8 @@ import {
     adminToggleTodo,
     adminDeleteTodo,
     adminUpdateTodo
-} from "@/app/admin/actions"
+    // This import was updated to match the new (dashboard) route group
+} from "../../app/(dashboard)/admin/actions"
 
 interface Profile {
     id: string

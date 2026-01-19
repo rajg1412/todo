@@ -7,7 +7,8 @@ import { DataTable } from '@/components/data-table/data-table'
 import { columns } from '@/components/data-table/columns'
 import { AddTaskDialog } from '@/components/dashboard/add-task-dialog'
 
-export default async function DashboardPage() {
+
+export default async function TasksPage() {
     const supabase = await createClient()
 
     const {
@@ -46,11 +47,6 @@ export default async function DashboardPage() {
                         <p className="text-muted-foreground pt-1">Logged in as {user.email}</p>
                     </div>
                     <div className="flex gap-2">
-                        {profile?.is_admin && (
-                            <Button asChild variant="secondary">
-                                <Link href="/admin">Admin Panel</Link>
-                            </Button>
-                        )}
                         <form action={signOut}>
                             <Button variant="outline">Sign Out</Button>
                         </form>
@@ -78,6 +74,8 @@ export default async function DashboardPage() {
                             status: todo.status || (todo.is_completed ? "done" : "todo"),
                             label: todo.label || "feature",
                             priority: todo.priority || "medium",
+                            description: todo.description,
+                            attachment_url: todo.attachment_url,
                         })) || []}
                         columns={columns}
                     />
